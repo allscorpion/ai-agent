@@ -23,10 +23,11 @@ def main():
 
     if (is_verbose):
         print(f"User prompt: {user_prompt}")
+        if (response.usage_metadata):
+            print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+            print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
     print(response.text)
-    if is_verbose:
-        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+        
 
 if __name__ == "__main__":
     main()
