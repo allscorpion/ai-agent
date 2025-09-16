@@ -97,16 +97,14 @@ def main():
     if response.function_calls:
         for function_call_part in response.function_calls:
             func_response = call_function(function_call_part, verbose=is_verbose)
-            if func_response.parts and func_response.parts[0].function_response:
-                response = func_response.parts[0].function_response.response
-
-                if not response:
-                    raise Exception("no function response returned")
-                elif is_verbose:
-                    print(f"-> {response}")
-
-            else:
+            if not func_response.parts or not func_response.parts[0].function_response:
                 raise Exception("no function response returned")
+            
+            response = func_response.parts[0].function_response.response
+
+            if is_verbose:
+                print(f"-> {response}")
+
     else:
         print(response.text)
         
