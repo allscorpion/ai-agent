@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 from functions.get_valid_path import get_valid_path
-
+from google.genai import types
 
 def run_python_file(working_directory, file_path, args=[]):
     full_path = get_valid_path(working_directory, file_path, "execute")
@@ -34,3 +34,21 @@ def run_python_file(working_directory, file_path, args=[]):
         return "\n".join(output) if output else "No output produced."
     except Exception as e:
         return f"Error: executing Python file: {e}"
+    
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description=f"Runs a python file along with arguments if necessary",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The file path of the file you want to run, relative to the working directory. If not provided the function will error.",
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                description="The arguments to be passed to run the file",
+            ),
+        },
+    ),
+)
