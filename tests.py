@@ -1,11 +1,11 @@
-from functions.get_files_info import get_files_info, get_file_content
-
+from functions.run_python_file import *
 def main():
     tests = [
-        get_file_content("calculator", "main.py"),
-        get_file_content("calculator", "pkg/calculator.py"),
-        get_file_content("calculator", "/bin/cat"),
-        get_file_content("calculator", "pkg/does_not_exist.py"),
+        run_python_file("calculator", "main.py"),
+        run_python_file("calculator", "main.py", ["3 + 5"]),
+        run_python_file("calculator", "tests.py"),
+        run_python_file("calculator", "../main.py"),
+        run_python_file("calculator", "nonexistent.py")
     ]
     for test in tests:
         print("------------")
