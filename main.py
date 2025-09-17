@@ -6,17 +6,19 @@ from functions.get_files_info import get_files_info, schema_get_files_info
 from functions.get_file_content import get_file_content, schema_get_file_content
 from functions.run_python_file import run_python_file, schema_run_python_file
 from functions.write_file import write_file, schema_write_file
-import sys 
+import sys
+
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
-if (len(sys.argv) <= 1):
+if len(sys.argv) <= 1:
     print("make sure to provide a prompt")
     sys.exit(1)
 
+
 def call_function(function_call_part, verbose=False):
-    if (verbose):
+    if verbose:
         print(f"Calling function: {function_call_part.name}({function_call_part.args})")
     else:
         print(f"Calling function: {function_call_part.name}")
@@ -50,7 +52,6 @@ def call_function(function_call_part, verbose=False):
             )
         ],
     )
-            
 
 
 def main():
@@ -74,7 +75,7 @@ def main():
             schema_get_files_info,
             schema_get_file_content,
             schema_run_python_file,
-            schema_write_file
+            schema_write_file,
         ]
     )
 
@@ -82,32 +83,79 @@ def main():
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-001", 
-        contents=messages, 
-        config=types.GenerateContentConfig(system_instruction=system_prompt, tools=[available_functions])
-    )
+    for i in range(0, 20):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-001",
+                contents=messages,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt, tools=[available_functions]
+                ),
+            )
 
-    if (is_verbose):
-        print(f"User prompt: {user_prompt}")
-        if (response.usage_metadata):
-            print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-            print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+            if response.candidates:
+                for candidate in response.candidates:
+                    if not candidate.content:
+                        continue
 
-    if response.function_calls:
-        for function_call_part in response.function_calls:
-            func_response = call_function(function_call_part, verbose=is_verbose)
-            if not func_response.parts or not func_response.parts[0].function_response:
-                raise Exception("no function response returned")
-            
-            response = func_response.parts[0].function_response.response
+                    messages.append(candidate.content)
 
             if is_verbose:
-                print(f"-> {response}")
+                print(f"User prompt: {user_prompt}")
+                if response.usage_metadata:
+                    print(
+                        f"Prompt tokens: {response.usage_metadata.prompt_token_count}"
+                    )
+                    print(
+                        f"Response tokens: {response.usage_metadata.candidates_token_count}"
+                    )
 
-    else:
-        print(response.text)
-        
+            if response.function_calls:
+                for function_call_part in response.function_calls:
+                    func_response = call_function(
+                        function_call_part, verbose=is_verbose
+                    )
+
+                    if (
+                        not func_response.parts
+                        or not func_response.parts[0].function_response
+                    ):
+                        raise Exception("no function response returned")
+
+                    response = func_response.parts[0].function_response.response
+
+                    if function_call_part.name:
+                        messages.append(
+                            types.Content(
+                                role="user",
+                                parts=[
+                                    types.Part.from_function_response(
+                                        name=function_call_part.name,
+                                        response={"result": response},
+                                    )
+                                ],
+                            )
+                        )
+
+                    if is_verbose:
+                        print(f"-> {response}")
+
+            elif response.text:
+                print(response.text)
+                break
+        except Exception as e:
+            messages.append(
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_function_response(
+                            name="Error",
+                            response={"error": f"An error occured: {e}"},
+                        )
+                    ],
+                )
+            )
+
 
 if __name__ == "__main__":
     main()
